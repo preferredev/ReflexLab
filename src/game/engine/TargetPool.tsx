@@ -1,40 +1,38 @@
 import { useEffect, useMemo, useRef } from "react";
+import { useFrame } from "@react-three/fiber";
 import { Mesh, MeshStandardMaterial, SphereGeometry } from "three";
+import type { ScenarioConfig } from "../scenarios/types";
+import { placeTarget, STRAFE_X_LIMIT, WALL_Z } from "./spawning";
 import type { SessionRuntime } from "./runtime";
 
 /**
- * Phase 2 test pool: a fixed set of static spheres in front of the back
- * wall. Meshes are created once and reused — a "respawn" only repositions
- * the mesh. Phase 3 replaces the hardcoded values with ScenarioConfig.
+ * Scenario-driven target pool. Meshes are created once per session and
+ * reused — a "respawn" only repositions the mesh and restamps its spawn
+ * time. Movement (Strafe Track) mutates positions in useFrame with no
+ * allocations and no React state.
  */
-const TEST_TARGET_COUNT = 5;
-const TEST_TARGET_RADIUS = 0.4;
-
-const SPAWN_Z = -7;
-const SPAWN_X = 5; // +/- range
-const SPAWN_Y_MIN = 0.8;
-const SPAWN_Y_MAX = 4;
-
-function randRange(min: number, max: number): number {
-  return min + Math.random() * (max - min);
-}
-
-export function TargetPool({ runtime }: { runtime: SessionRuntime }) {
+export function TargetPool({
+  runtime,
+  scenario,
+}: {
+  runtime: SessionRuntime;
+  scenario: ScenarioConfig;
+}) {
   const meshRefs = useRef<(Mesh | null)[]>([]);
 
   // Shared geometry/material — created once, disposed on unmount.
   const geometry = useMemo(
-    () => new SphereGeometry(TEST_TARGET_RADIUS, 24, 16),
-    [],
+    () => new SphereGeometry(scenario.targetRadius, 24, 16),
+    [scenario.targetRadius],
   );
   const material = useMemo(
     () =>
       new MeshStandardMaterial({
-        color: "#22d3ee",
-        emissive: "#0e7490",
-        emissiveIntensity: 0.7,
+        color: scenario.accent,
+        emissive: scenario.accent,
+        emissiveIntensity: 0.45,
       }),
-    [],
+    [scenario.accent],
   );
 
   useEffect(() => {
@@ -44,30 +42,56 @@ export function TargetPool({ runtime }: { runtime: SessionRuntime }) {
     };
   }, [geometry, material]);
 
+  // Register the pool with the runtime and scatter initial positions.
   useEffect(() => {
-    const meshes = meshRefs.current.filter((m): m is Mesh => m !== null);
+    const meshes = meshRefs.current
+      .filter((m): m is Mesh => m !== null)
+      .slice(0, scenario.simultaneousTargets);
 
     runtime.targetMeshes = meshes;
-    runtime.respawnTarget = (target) => {
-      target.position.set(
-        randRange(-SPAWN_X, SPAWN_X),
-        randRange(SPAWN_Y_MIN, SPAWN_Y_MAX),
-        SPAWN_Z,
-      );
-    };
+    runtime.respawnTarget = (target) => placeTarget(target, scenario, meshes);
 
-    // Scatter initial positions.
-    for (const mesh of meshes) runtime.respawnTarget(mesh);
+    for (const mesh of meshes) placeTarget(mesh, scenario, meshes);
 
     return () => {
       runtime.targetMeshes = [];
       runtime.respawnTarget = null;
     };
-  }, [runtime]);
+  }, [runtime, scenario]);
+
+  // Strafe movement: bounce at lane edges + sudden random direction flips.
+  useFrame((_, delta) => {
+    if (
+      scenario.moveSpeed === 0 ||
+      runtime.finished ||
+      document.pointerLockElement === null
+    ) {
+      return;
+    }
+
+    for (const mesh of runtime.targetMeshes) {
+      const data = mesh.userData;
+      mesh.position.x += (data.dir as number) * scenario.moveSpeed * delta;
+
+      if (mesh.position.x >= STRAFE_X_LIMIT) {
+        mesh.position.x = STRAFE_X_LIMIT;
+        data.dir = -1;
+      } else if (mesh.position.x <= -STRAFE_X_LIMIT) {
+        mesh.position.x = -STRAFE_X_LIMIT;
+        data.dir = 1;
+      }
+
+      data.flipIn = (data.flipIn as number) - delta;
+      if (data.flipIn <= 0) {
+        data.dir = -(data.dir as number);
+        data.flipIn = 0.6 + Math.random();
+      }
+    }
+  });
 
   return (
     <>
-      {Array.from({ length: TEST_TARGET_COUNT }, (_, i) => (
+      {Array.from({ length: scenario.simultaneousTargets }, (_, i) => (
         <mesh
           key={i}
           ref={(m) => {
@@ -75,7 +99,7 @@ export function TargetPool({ runtime }: { runtime: SessionRuntime }) {
           }}
           geometry={geometry}
           material={material}
-          position={[0, 1.6, SPAWN_Z]}
+          position={[0, 1.6, WALL_Z]}
         />
       ))}
     </>

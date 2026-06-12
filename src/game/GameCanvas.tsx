@@ -3,9 +3,18 @@ import { Room } from "./engine/Room";
 import { TargetPool } from "./engine/TargetPool";
 import { PlayerController } from "./engine/PlayerController";
 import { ShootController } from "./engine/ShootController";
+import { SessionClock } from "./engine/SessionClock";
 import type { SessionRuntime } from "./engine/runtime";
+import type { ScenarioConfig } from "./scenarios/types";
 
-export function GameCanvas({ runtime }: { runtime: SessionRuntime }) {
+interface GameCanvasProps {
+  runtime: SessionRuntime;
+  scenario: ScenarioConfig;
+  durationSec: number;
+  onFinish: () => void;
+}
+
+export function GameCanvas({ runtime, scenario, durationSec, onFinish }: GameCanvasProps) {
   return (
     <Canvas
       gl={{ antialias: true, powerPreference: "high-performance" }}
@@ -16,9 +25,10 @@ export function GameCanvas({ runtime }: { runtime: SessionRuntime }) {
       <color attach="background" args={["#0a0a12"]} />
       <fog attach="fog" args={["#0a0a12", 24, 44]} />
       <Room />
-      <TargetPool runtime={runtime} />
+      <TargetPool runtime={runtime} scenario={scenario} />
       <PlayerController runtime={runtime} />
-      <ShootController runtime={runtime} />
+      <ShootController runtime={runtime} scenario={scenario} />
+      <SessionClock runtime={runtime} durationSec={durationSec} onFinish={onFinish} />
     </Canvas>
   );
 }

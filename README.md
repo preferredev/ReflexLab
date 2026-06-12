@@ -27,7 +27,7 @@ npm run dev
 
 - [x] Phase 1 — Foundation + UI shell (screens, settings, persistence)
 - [x] Phase 2 — 3D aim trainer core (pointer lock, raycast hits)
-- [ ] Phase 3 — Scenarios + scoring
+- [x] Phase 3 — Scenarios + scoring
 - [ ] Phase 4 — Polish + performance
 
 ## License

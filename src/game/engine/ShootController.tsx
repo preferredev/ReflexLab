@@ -1,14 +1,21 @@
 import { useEffect } from "react";
 import { useThree } from "@react-three/fiber";
 import { Raycaster, Vector3 } from "three";
+import type { ScenarioConfig } from "../scenarios/types";
 import type { SessionRuntime } from "./runtime";
 
 /**
  * Left click while pointer-locked fires one ray from the screen center.
- * First intersected target = hit (respawn it); nothing = miss.
- * Raycaster and vectors are allocated once — nothing allocates per shot.
+ * Hit: add score + reaction time, respawn the target. Miss: apply the
+ * scenario's penalty. Raycaster and vectors are allocated once.
  */
-export function ShootController({ runtime }: { runtime: SessionRuntime }) {
+export function ShootController({
+  runtime,
+  scenario,
+}: {
+  runtime: SessionRuntime;
+  scenario: ScenarioConfig;
+}) {
   const camera = useThree((s) => s.camera);
 
   useEffect(() => {
@@ -17,7 +24,13 @@ export function ShootController({ runtime }: { runtime: SessionRuntime }) {
     const direction = new Vector3();
 
     const onMouseDown = (e: MouseEvent) => {
-      if (e.button !== 0 || document.pointerLockElement === null) return;
+      if (
+        e.button !== 0 ||
+        document.pointerLockElement === null ||
+        runtime.finished
+      ) {
+        return;
+      }
 
       camera.getWorldPosition(origin);
       camera.getWorldDirection(direction);
@@ -26,15 +39,23 @@ export function ShootController({ runtime }: { runtime: SessionRuntime }) {
       const hit = raycaster.intersectObjects(runtime.targetMeshes, false)[0];
       if (hit) {
         runtime.hits += 1;
+        runtime.score += scenario.hitScore;
+
+        const spawnedAt = hit.object.userData.spawnedAt as number | undefined;
+        if (spawnedAt !== undefined) {
+          runtime.reactionSum += performance.now() - spawnedAt;
+        }
+
         runtime.respawnTarget?.(hit.object);
       } else {
         runtime.misses += 1;
+        runtime.score = Math.max(0, runtime.score - scenario.missPenalty);
       }
     };
 
     document.addEventListener("mousedown", onMouseDown);
     return () => document.removeEventListener("mousedown", onMouseDown);
-  }, [camera, runtime]);
+  }, [camera, runtime, scenario]);
 
   return null;
 }
