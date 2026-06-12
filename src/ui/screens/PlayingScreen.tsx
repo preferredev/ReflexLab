@@ -1,63 +1,58 @@
+import { useEffect, useRef, useState } from "react";
 import { getScenario } from "../../game/scenarios";
-import { useResultsStore } from "../../state/resultsStore";
+import { GameCanvas } from "../../game/GameCanvas";
+import { createRuntime, type SessionRuntime } from "../../game/engine/runtime";
 import { useScreenStore } from "../../state/screenStore";
-import { useSettingsStore } from "../../state/settingsStore";
-import { Button } from "../components/Button";
-import { Panel } from "../components/Panel";
+import { Crosshair } from "../hud/Crosshair";
+import { Hud } from "../hud/Hud";
+import { LockOverlay } from "../overlays/LockOverlay";
 
 /**
- * Phase 1 placeholder. The 3D engine (pointer lock, raycasting, targets)
- * replaces this in Phase 2. The dev-only "simulate session" button exists
- * purely to exercise the Summary screen and personal-best flow.
+ * Hosts the 3D canvas plus DOM overlays (crosshair, HUD, pause).
+ * One SessionRuntime is created per visit and shared by canvas + HUD.
  */
 export function PlayingScreen() {
   const scenarioId = useScreenStore((s) => s.scenarioId);
   const goTo = useScreenStore((s) => s.goTo);
-  const recordSession = useResultsStore((s) => s.recordSession);
-  const sessionDurationSec = useSettingsStore((s) => s.sessionDurationSec);
 
-  if (!scenarioId) {
-    // Defensive: landed here without a scenario; bounce back.
-    goTo("scenario-select");
-    return null;
-  }
+  const containerRef = useRef<HTMLDivElement>(null);
+  const runtimeRef = useRef<SessionRuntime | null>(null);
+  if (runtimeRef.current === null) runtimeRef.current = createRuntime();
+  const runtime = runtimeRef.current;
+
+  const [locked, setLocked] = useState(false);
+
+  // Track pointer lock; losing it (e.g. Escape) shows the pause overlay.
+  useEffect(() => {
+    const onChange = () => setLocked(document.pointerLockElement !== null);
+    document.addEventListener("pointerlockchange", onChange);
+    return () => document.removeEventListener("pointerlockchange", onChange);
+  }, []);
+
+  // Defensive: landed here without a scenario; bounce back.
+  useEffect(() => {
+    if (!scenarioId) goTo("scenario-select");
+  }, [scenarioId, goTo]);
+  if (!scenarioId) return null;
 
   const scenario = getScenario(scenarioId);
 
-  const simulateSession = () => {
-    const hits = 20 + Math.floor(Math.random() * 40);
-    const misses = Math.floor(Math.random() * 15);
-    const score = Math.max(0, hits * scenario.hitScore - misses * scenario.missPenalty);
-    recordSession({
-      scenarioId: scenario.id,
-      score,
-      hits,
-      misses,
-      accuracy: hits / Math.max(1, hits + misses),
-      avgReactionMs: 350 + Math.random() * 400,
-      durationSec: sessionDurationSec,
-      endedAt: Date.now(),
-    });
-    goTo("summary");
+  const requestLock = () => {
+    containerRef.current?.querySelector("canvas")?.requestPointerLock();
   };
 
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-6 px-6">
-      <Panel className="flex max-w-md flex-col items-center gap-4 text-center">
-        <h2 className="text-xl font-bold" style={{ color: scenario.accent }}>
-          {scenario.name}
-        </h2>
-        <p className="text-sm text-zinc-400">
-          3D engine arrives in Phase 2. This placeholder verifies the screen flow,
-          scoring model, and personal-best persistence.
-        </p>
-        <div className="flex gap-3">
-          <Button onClick={simulateSession}>Simulate Session (dev)</Button>
-          <Button variant="ghost" onClick={() => goTo("scenario-select")}>
-            Quit
-          </Button>
-        </div>
-      </Panel>
+    <div ref={containerRef} className="relative h-full">
+      <GameCanvas runtime={runtime} />
+      <Crosshair />
+      <Hud runtime={runtime} scenarioName={scenario.name} accent={scenario.accent} />
+      {!locked && (
+        <LockOverlay
+          scenario={scenario}
+          onResume={requestLock}
+          onQuit={() => goTo("scenario-select")}
+        />
+      )}
     </div>
   );
 }
