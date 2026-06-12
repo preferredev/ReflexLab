@@ -21,6 +21,20 @@ export function Room() {
         <meshStandardMaterial color="#0d0d16" />
       </mesh>
 
+      {/* Neon trim along the wall seams */}
+      <mesh position={[0, 0.06, -7.94]}>
+        <boxGeometry args={[24, 0.08, 0.08]} />
+        <meshBasicMaterial color="#155e75" />
+      </mesh>
+      <mesh position={[-11.94, 0.06, 4]} rotation={[0, Math.PI / 2, 0]}>
+        <boxGeometry args={[24, 0.08, 0.08]} />
+        <meshBasicMaterial color="#0e4a5e" />
+      </mesh>
+      <mesh position={[11.94, 0.06, 4]} rotation={[0, Math.PI / 2, 0]}>
+        <boxGeometry args={[24, 0.08, 0.08]} />
+        <meshBasicMaterial color="#0e4a5e" />
+      </mesh>
+
       {/* Side walls */}
       <mesh position={[-12, 4, 4]} rotation={[0, Math.PI / 2, 0]}>
         <planeGeometry args={[24, 8]} />

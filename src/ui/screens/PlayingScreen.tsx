@@ -5,8 +5,10 @@ import { createRuntime, type SessionRuntime } from "../../game/engine/runtime";
 import { useResultsStore } from "../../state/resultsStore";
 import { useScreenStore } from "../../state/screenStore";
 import { useSettingsStore } from "../../state/settingsStore";
+import { playFinish } from "../../lib/audio";
 import { Crosshair } from "../hud/Crosshair";
 import { Hud } from "../hud/Hud";
+import { Hitmarker } from "../hud/Hitmarker";
 import { LockOverlay } from "../overlays/LockOverlay";
 
 /**
@@ -43,6 +45,7 @@ export function PlayingScreen() {
   const finishSession = useCallback(() => {
     if (!scenarioId) return;
     document.exitPointerLock();
+    playFinish(useSettingsStore.getState().volume);
 
     const shots = runtime.hits + runtime.misses;
     recordSession({
@@ -75,6 +78,7 @@ export function PlayingScreen() {
         onFinish={finishSession}
       />
       <Crosshair />
+      <Hitmarker runtime={runtime} />
       <Hud runtime={runtime} scenarioName={scenario.name} accent={scenario.accent} />
       {!locked && (
         <LockOverlay

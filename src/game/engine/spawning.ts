@@ -82,6 +82,8 @@ export function placeTarget(
   }
 
   target.userData.spawnedAt = performance.now();
+  // Start small; the target pool animates the grow-in each frame.
+  target.scale.setScalar(0.05);
 
   if (config.moveSpeed > 0) {
     target.userData.dir = randSign();

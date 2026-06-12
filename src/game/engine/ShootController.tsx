@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 import { useThree } from "@react-three/fiber";
 import { Raycaster, Vector3 } from "three";
+import { playHit, playMiss } from "../../lib/audio";
+import { useSettingsStore } from "../../state/settingsStore";
 import type { ScenarioConfig } from "../scenarios/types";
 import type { SessionRuntime } from "./runtime";
 
@@ -36,6 +38,7 @@ export function ShootController({
       camera.getWorldDirection(direction);
       raycaster.set(origin, direction);
 
+      const volume = useSettingsStore.getState().volume;
       const hit = raycaster.intersectObjects(runtime.targetMeshes, false)[0];
       if (hit) {
         runtime.hits += 1;
@@ -47,9 +50,13 @@ export function ShootController({
         }
 
         runtime.respawnTarget?.(hit.object);
+        runtime.notifyShot?.(true);
+        playHit(volume);
       } else {
         runtime.misses += 1;
         runtime.score = Math.max(0, runtime.score - scenario.missPenalty);
+        runtime.notifyShot?.(false);
+        playMiss(volume);
       }
     };
 

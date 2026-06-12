@@ -58,6 +58,18 @@ export function SettingsOverlay() {
             />
           </Row>
 
+          <Row label={`Volume — ${Math.round(settings.volume * 100)}%`}>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={settings.volume}
+              onChange={(e) => settings.updateSettings({ volume: Number(e.target.value) })}
+              className="accent-cyan-400"
+            />
+          </Row>
+
           <Row label="Session duration">
             <div className="flex gap-2">
               {SESSION_DURATIONS.map((sec) => (

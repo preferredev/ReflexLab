@@ -5,6 +5,9 @@ import type { ScenarioConfig } from "../scenarios/types";
 import { placeTarget, STRAFE_X_LIMIT, WALL_Z } from "./spawning";
 import type { SessionRuntime } from "./runtime";
 
+/** Seconds for a freshly spawned target to reach full size. */
+const GROW_SEC = 0.12;
+
 /**
  * Scenario-driven target pool. Meshes are created once per session and
  * reused — a "respawn" only repositions the mesh and restamps its spawn
@@ -59,15 +62,19 @@ export function TargetPool({
     };
   }, [runtime, scenario]);
 
-  // Strafe movement: bounce at lane edges + sudden random direction flips.
+  // Per-frame target updates: grow-in animation + strafe movement.
+  // Mutates pooled meshes only — no allocations, no React state.
   useFrame((_, delta) => {
-    if (
-      scenario.moveSpeed === 0 ||
-      runtime.finished ||
-      document.pointerLockElement === null
-    ) {
-      return;
+    if (runtime.finished) return;
+
+    // Spawn grow-in (runs for every scenario, very cheap).
+    for (const mesh of runtime.targetMeshes) {
+      const s = mesh.scale.x;
+      if (s < 1) mesh.scale.setScalar(Math.min(1, s + delta / GROW_SEC));
     }
+
+    // Strafe movement: bounce at lane edges + sudden random direction flips.
+    if (scenario.moveSpeed === 0 || document.pointerLockElement === null) return;
 
     for (const mesh of runtime.targetMeshes) {
       const data = mesh.userData;

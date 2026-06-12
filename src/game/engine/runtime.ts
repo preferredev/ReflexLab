@@ -23,6 +23,8 @@ export interface SessionRuntime {
   targetMeshes: Object3D[];
   /** Registered by the target pool: repositions a hit target. */
   respawnTarget: ((target: Object3D) => void) | null;
+  /** Registered by the DOM hitmarker: fires feedback for a shot. */
+  notifyShot: ((hit: boolean) => void) | null;
 }
 
 export function createRuntime(durationSec: number): SessionRuntime {
@@ -38,5 +40,6 @@ export function createRuntime(durationSec: number): SessionRuntime {
     finished: false,
     targetMeshes: [],
     respawnTarget: null,
+    notifyShot: null,
   };
 }

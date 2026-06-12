@@ -10,6 +10,8 @@ export interface Settings {
   sessionDurationSec: number;
   /** Crosshair color (hex). */
   crosshairColor: string;
+  /** SFX volume, 0..1. */
+  volume: number;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -17,6 +19,7 @@ export const DEFAULT_SETTINGS: Settings = {
   fov: 90,
   sessionDurationSec: 60,
   crosshairColor: "#22d3ee",
+  volume: 0.5,
 };
 
 export const SESSION_DURATIONS = [30, 60, 90] as const;
@@ -45,12 +48,13 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   ...loadInitial(),
   updateSettings: (patch) => {
     set(patch);
-    const { sensitivity, fov, sessionDurationSec, crosshairColor } = get();
+    const { sensitivity, fov, sessionDurationSec, crosshairColor, volume } = get();
     saveJSON<Settings>(STORAGE_KEY, {
       sensitivity,
       fov,
       sessionDurationSec,
       crosshairColor,
+      volume,
     });
   },
   resetSettings: () => {
