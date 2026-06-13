@@ -23,19 +23,6 @@ npm install
 npm run dev
 ```
 
-## Status
-
-- [x] Phase 1 — Foundation + UI shell (screens, settings, persistence)
-- [x] Phase 2 — 3D aim trainer core (pointer lock, raycast hits)
-- [x] Phase 3 — Scenarios + scoring
-- [x] Phase 4 — Polish + performance
-
-## Deployment
-
-Pushing to the default branch builds the app and publishes it to GitLab Pages
-(see `.gitlab-ci.yml`). The Vite `base` is relative, so the build works under
-any subpath.
-
 ## License
 
 MIT
