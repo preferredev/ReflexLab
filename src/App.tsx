@@ -1,3 +1,4 @@
+import { Analytics } from "@vercel/analytics/react";
 import { useScreenStore } from "./state/screenStore";
 import { MenuScreen } from "./ui/screens/MenuScreen";
 import { ScenarioSelectScreen } from "./ui/screens/ScenarioSelectScreen";
@@ -16,6 +17,7 @@ export default function App() {
       {screen === "playing" && <PlayingScreen />}
       {screen === "summary" && <SummaryScreen />}
       {settingsOpen && <SettingsOverlay />}
+      <Analytics />
     </div>
   );
 }
